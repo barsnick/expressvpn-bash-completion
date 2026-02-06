@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+
+# Bash completion for expressvpnctl.
+
+_expressvpnctl_regions() {
+  local line
+  expressvpnctl get regions 2>/dev/null | while IFS= read -r line; do
+    [[ -n $line ]] && printf '%s\n' "$line"
+  done
+}
+
+_expressvpnctl_complete_regions() {
+  local cur=$1
+  local line
+  local matches=()
+  while IFS= read -r line; do
+    [[ $line == "$cur"* ]] && matches+=("$line")
+  done < <(_expressvpnctl_regions)
+  COMPREPLY+=("${matches[@]}")
+}
+
+_expressvpnctl() {
+  local cur prev words cword
+  _init_completion -s || return
+
+  local options="--timeout -t --debug -d --help -h --version -v"
+  local commands="background connect dedicatedip disconnect get install-chrome-extension install-firefox-extension login logout monitor resetsettings set status"
+
+  local cmd=""
+  local cmd_index=-1
+  local i
+  for ((i=1; i<${#words[@]}; i++)); do
+    if [[ ${words[i]} != -* ]]; then
+      cmd=${words[i]}
+      cmd_index=$i
+      break
+    fi
+  done
+
+  if [[ $cur == -* ]]; then
+    COMPREPLY=( $(compgen -W "$options" -- "$cur") )
+    return
+  fi
+
+  if [[ -z $cmd ]]; then
+    COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
+    return
+  fi
+
+  if (( cword == cmd_index )); then
+    COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
+    return
+  fi
+
+  case "$cmd" in
+    background)
+      if (( cword == cmd_index + 1 )); then
+        COMPREPLY=( $(compgen -W "enable disable" -- "$cur") )
+      fi
+      ;;
+    connect)
+      if (( cword == cmd_index + 1 )); then
+        if [[ $cur == s* ]]; then
+          COMPREPLY=( $(compgen -W "smart" -- "$cur") )
+        fi
+        _expressvpnctl_complete_regions "$cur"
+      fi
+      ;;
+    dedicatedip)
+      if (( cword == cmd_index + 1 )); then
+        COMPREPLY=( $(compgen -W "status unlock ip" -- "$cur") )
+      fi
+      ;;
+    get|monitor)
+      if (( cword == cmd_index + 1 )); then
+        local types="allowlan autoconnect blockAds blockAdult blockAll blockMalicious blockTrackers connectionstate debuglogging dnsconfigured networklock protocol pubip region regions smart split-app splittunnel vpnip"
+        COMPREPLY=( $(compgen -W "$types" -- "$cur") )
+      fi
+      ;;
+    login)
+      if (( cword == cmd_index + 1 )); then
+        _filedir
+      fi
+      ;;
+    set)
+      if (( cword == cmd_index + 1 )); then
+        local types="allowlan autoconnect blockAds blockAdult blockAll blockMalicious blockTrackers debuglogging networklock protocol region split-app splittunnel"
+        COMPREPLY=( $(compgen -W "$types" -- "$cur") )
+        return
+      fi
+
+      if (( cword == cmd_index + 2 )); then
+        local type=${words[cmd_index+1]}
+        case "$type" in
+          allowlan|autoconnect|blockAds|blockAdult|blockAll|blockMalicious|blockTrackers|debuglogging|networklock|splittunnel)
+            COMPREPLY=( $(compgen -W "true false" -- "$cur") )
+            ;;
+          protocol)
+            COMPREPLY=( $(compgen -W "auto lightwayudp lightwaytcp openvpnudp openvpntcp wireguard" -- "$cur") )
+            ;;
+          region)
+            if [[ $cur == s* ]]; then
+              COMPREPLY=( $(compgen -W "smart" -- "$cur") )
+            fi
+            _expressvpnctl_complete_regions "$cur"
+            ;;
+          split-app)
+            if [[ $cur == *:* ]]; then
+              local prefix=${cur%%:*}
+              local path=${cur#*:}
+              local matches=()
+              local file
+              while IFS= read -r file; do
+                matches+=("${prefix}:$file")
+              done < <(compgen -f -- "$path")
+              COMPREPLY=("${matches[@]}")
+            else
+              COMPREPLY=( $(compgen -W "bypass: vpn: remove:" -- "$cur") )
+            fi
+            ;;
+        esac
+      fi
+      ;;
+  esac
+}
+
+complete -F _expressvpnctl expressvpnctl
