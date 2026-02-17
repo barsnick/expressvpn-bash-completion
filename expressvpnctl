@@ -11,12 +11,43 @@ _expressvpnctl_regions() {
 
 _expressvpnctl_complete_regions() {
   local cur=$1
+  shift
+
+  local match_cur=$cur
+  local quoted=0
   local line
-  local matches=()
+  local candidate
+  local escaped
+  local -a candidates=("$@")
+  local -a matches=()
+
+  if [[ $match_cur == \'* ]]; then
+    quoted=1
+    match_cur=${match_cur:1}
+  elif [[ $match_cur == \"* ]]; then
+    quoted=1
+    match_cur=${match_cur:1}
+  fi
+
+  # Users may pre-escape shell metacharacters (e.g. foo-\(bar\)); match against raw values.
+  match_cur=${match_cur//\\}
+
   while IFS= read -r line; do
-    [[ $line == "$cur"* ]] && matches+=("$line")
+    [[ -n $line ]] && candidates+=("$line")
   done < <(_expressvpnctl_regions)
-  COMPREPLY+=("${matches[@]}")
+
+  for candidate in "${candidates[@]}"; do
+    [[ $candidate == "$match_cur"* ]] && matches+=("$candidate")
+  done
+
+  for candidate in "${matches[@]}"; do
+    if ((quoted)); then
+      COMPREPLY+=("$candidate")
+    else
+      printf -v escaped '%q' "$candidate"
+      COMPREPLY+=("$escaped")
+    fi
+  done
 }
 
 _expressvpnctl() {
@@ -60,10 +91,7 @@ _expressvpnctl() {
       ;;
     connect)
       if (( cword == cmd_index + 1 )); then
-        if [[ $cur == s* ]]; then
-          COMPREPLY=( $(compgen -W "smart" -- "$cur") )
-        fi
-        _expressvpnctl_complete_regions "$cur"
+        _expressvpnctl_complete_regions "$cur" "smart"
       fi
       ;;
     dedicatedip)
@@ -99,10 +127,7 @@ _expressvpnctl() {
             COMPREPLY=( $(compgen -W "auto lightwayudp lightwaytcp openvpnudp openvpntcp wireguard" -- "$cur") )
             ;;
           region)
-            if [[ $cur == s* ]]; then
-              COMPREPLY=( $(compgen -W "smart" -- "$cur") )
-            fi
-            _expressvpnctl_complete_regions "$cur"
+            _expressvpnctl_complete_regions "$cur" "smart"
             ;;
           split-app)
             if [[ $cur == *:* ]]; then
