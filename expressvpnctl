@@ -60,12 +60,40 @@ _expressvpnctl() {
   local cmd=""
   local cmd_index=-1
   local i
+
+  if [[ $prev == "--timeout" || $prev == "-t" ]]; then
+    COMPREPLY=( $(compgen -W "5 10 15 30 60 120" -- "$cur") )
+    return
+  fi
+
   for ((i=1; i<${#words[@]}; i++)); do
-    if [[ ${words[i]} != -* ]]; then
-      cmd=${words[i]}
-      cmd_index=$i
-      break
-    fi
+    case "${words[i]}" in
+      --timeout|-t)
+        ((i++))
+        continue
+        ;;
+      --timeout=*)
+        continue
+        ;;
+      --debug|-d|--help|-h|--version|-v)
+        continue
+        ;;
+      --)
+        if (( i + 1 < ${#words[@]} )); then
+          cmd=${words[i+1]}
+          cmd_index=$((i + 1))
+        fi
+        break
+        ;;
+      -*)
+        continue
+        ;;
+      *)
+        cmd=${words[i]}
+        cmd_index=$i
+        break
+        ;;
+    esac
   done
 
   if [[ $cur == -* ]]; then
