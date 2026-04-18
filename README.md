@@ -6,7 +6,7 @@ Bash completion for Linux (Bash 4+), targeting the ExpressVPN CLI executable
 For ExpressVPN client versions up to 3, Bash completions were included.
 
 Created and tested against ExpressVPN client `expressvpnctl` version
-`5.0.1+11498`.
+`14.0.1+12858`, yet should be mostly compatible with version 5.
 
 ## Features
 

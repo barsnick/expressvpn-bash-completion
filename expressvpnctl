@@ -55,7 +55,7 @@ _expressvpnctl() {
   _init_completion -s || return
 
   local options="--timeout -t --debug -d --help -h --version -v"
-  local commands="background connect dedicatedip disconnect get install-chrome-extension install-firefox-extension login logout monitor resetsettings set status"
+  local commands="background connect dedicatedip disconnect get install-chrome-extension install-firefox-extension login logout monitor resetsettings set speedtest status"
 
   local cmd=""
   local cmd_index=-1
@@ -172,6 +172,50 @@ _expressvpnctl() {
             fi
             ;;
         esac
+      fi
+      ;;
+    speedtest)
+      local -a speedtest_args=()
+      local arg
+
+      for ((i=cmd_index + 1; i<cword; i++)); do
+        speedtest_args+=("${words[i]}")
+      done
+
+      if ((${#speedtest_args[@]} == 0)); then
+        COMPREPLY=( $(compgen -W "json automatic manual" -- "$cur") )
+        _expressvpnctl_complete_regions "$cur"
+        return
+      fi
+
+      if ((${#speedtest_args[@]} == 1)); then
+        arg=${speedtest_args[0]}
+        case "$arg" in
+          json)
+            COMPREPLY=( $(compgen -W "automatic manual" -- "$cur") )
+            _expressvpnctl_complete_regions "$cur"
+            ;;
+          manual)
+            _expressvpnctl_complete_regions "$cur"
+            ;;
+          *)
+            ;;
+        esac
+        return
+      fi
+
+      if ((${#speedtest_args[@]} == 2)); then
+        if [[ ${speedtest_args[0]} == "json" && ${speedtest_args[1]} != "automatic" && ${speedtest_args[1]} != "manual" ]]; then
+          COMPREPLY=( $(compgen -W "automatic manual" -- "$cur") )
+          return
+        fi
+
+        if [[ ${speedtest_args[0]} == "json" && ${speedtest_args[1]} == "manual" ]]; then
+          _expressvpnctl_complete_regions "$cur"
+          return
+        fi
+
+        return
       fi
       ;;
   esac
